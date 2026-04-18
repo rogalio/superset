@@ -15,6 +15,7 @@ import type {
 	DashboardSidebarSection,
 	DashboardSidebarWorkspace,
 } from "../../types";
+import { MOCK_SIDEBAR_PROJECTS } from "./mock-data";
 
 // Pending workspaces are always rendered at the end of the project's workspace list
 const PENDING_WORKSPACE_TAB_ORDER = Number.MAX_SAFE_INTEGER;
@@ -338,8 +339,12 @@ export function useDashboardSidebarData() {
 		sidebarWorkspaces,
 	]);
 
+	const USE_MOCK = import.meta.env.VITE_MOCK_SIDEBAR === "true";
+	const effectiveGroups =
+		USE_MOCK || groups.length === 0 ? MOCK_SIDEBAR_PROJECTS : groups;
+
 	return {
-		groups,
+		groups: effectiveGroups,
 		refetchPullRequests,
 		refreshWorkspacePullRequest,
 		toggleProjectCollapsed,

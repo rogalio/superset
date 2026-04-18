@@ -106,7 +106,8 @@ function DashboardLayout() {
 							setWorkspaceSidebarWidth(DEFAULT_WORKSPACE_SIDEBAR_WIDTH)
 						}
 					>
-						{isV2CloudEnabled ? (
+						{isV2CloudEnabled ||
+						import.meta.env.VITE_MOCK_SIDEBAR === "true" ? (
 							<DashboardSidebar isCollapsed={isWorkspaceSidebarCollapsed()} />
 						) : (
 							<WorkspaceSidebar
