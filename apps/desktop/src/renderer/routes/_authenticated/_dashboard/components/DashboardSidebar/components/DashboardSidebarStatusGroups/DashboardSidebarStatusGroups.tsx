@@ -25,81 +25,64 @@ interface StatusGroup {
 function getStatusKey(workspace: DashboardSidebarWorkspace): string {
 	const pr = workspace.pullRequest;
 	if (!pr) return "no-pr";
-	if (pr.state === "merged") return "merged";
-	if (pr.state === "closed") return "closed";
-	if (pr.state === "draft") return "draft";
-	if (pr.reviewDecision === "approved") return "approved";
-	if (pr.reviewDecision === "changes_requested") return "changes-requested";
-	return "in-review";
+	return pr.state;
 }
+
+const STROKE_WIDTH = 1.75;
 
 const STATUS_CONFIG: Record<
 	string,
 	{ label: string; icon: React.ReactNode; order: number }
 > = {
-	"in-review": {
-		label: "In Review",
-		icon: (
-			<GitPullRequest className="size-3.5 text-sky-400/70" strokeWidth={1.75} />
-		),
-		order: 0,
-	},
-	"changes-requested": {
-		label: "Changes Requested",
-		icon: (
-			<GitPullRequest
-				className="size-3.5 text-amber-400/80"
-				strokeWidth={1.75}
-			/>
-		),
-		order: 1,
-	},
-	approved: {
-		label: "Ready to Merge",
+	open: {
+		label: "Open",
 		icon: (
 			<GitPullRequest
 				className="size-3.5 text-emerald-400/80"
-				strokeWidth={1.75}
+				strokeWidth={STROKE_WIDTH}
 			/>
 		),
-		order: 2,
-	},
-	merged: {
-		label: "Merged",
-		icon: (
-			<GitMerge className="size-3.5 text-violet-400/80" strokeWidth={1.75} />
-		),
-		order: 3,
+		order: 0,
 	},
 	draft: {
 		label: "Draft",
 		icon: (
 			<GitPullRequestDraft
 				className="size-3.5 text-muted-foreground/70"
-				strokeWidth={1.75}
+				strokeWidth={STROKE_WIDTH}
 			/>
 		),
-		order: 4,
+		order: 1,
+	},
+	merged: {
+		label: "Merged",
+		icon: (
+			<GitMerge
+				className="size-3.5 text-violet-400/80"
+				strokeWidth={STROKE_WIDTH}
+			/>
+		),
+		order: 2,
 	},
 	closed: {
 		label: "Closed",
 		icon: (
 			<GitPullRequestClosed
 				className="size-3.5 text-rose-400/70"
-				strokeWidth={1.75}
+				strokeWidth={STROKE_WIDTH}
 			/>
 		),
-		order: 5,
+		order: 3,
 	},
 	"no-pr": {
 		label: "No Pull Request",
 		icon: (
 			<CircleDot
 				className="size-3.5 text-muted-foreground/50"
-				strokeWidth={1.75}
+				strokeWidth={STROKE_WIDTH}
 			/>
 		),
-		order: 6,
+		order: 4,
 	},
 };
 
@@ -184,21 +167,20 @@ export function DashboardSidebarStatusGroups({
 										key={workspace.id}
 										className="flex items-center gap-2 rounded-md px-3 py-1 ml-2 text-sm text-foreground/80 hover:bg-accent/30 cursor-pointer transition-colors"
 									>
-										{workspace.pullRequest && (
+										{workspace.pullRequest ? (
 											<PullRequestStatusIcon
 												pr={workspace.pullRequest}
 												className="size-3.5 shrink-0"
 											/>
-										)}
-										{!workspace.pullRequest && (
+										) : (
 											<CircleDot
 												className="size-3.5 shrink-0 text-muted-foreground/50"
-												strokeWidth={1.75}
+												strokeWidth={STROKE_WIDTH}
 											/>
 										)}
-										<div className="flex flex-col min-w-0">
+										<div className="flex min-w-0 flex-col">
 											<span className="truncate">{workspace.name}</span>
-											<span className="text-[10px] text-muted-foreground/50 truncate">
+											<span className="truncate text-[10px] text-muted-foreground/50">
 												{projectLabel}
 											</span>
 										</div>
