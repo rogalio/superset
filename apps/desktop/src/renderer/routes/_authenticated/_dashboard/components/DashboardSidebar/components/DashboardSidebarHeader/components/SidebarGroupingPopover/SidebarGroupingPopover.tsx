@@ -31,7 +31,7 @@ const STATUS_META: Record<
 	"in-progress": {
 		label: "In progress",
 		icon: CircleDotDashed,
-		color: "text-amber-400/80",
+		color: "text-muted-foreground/70",
 	},
 	"in-review": {
 		label: "In review",
