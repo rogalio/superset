@@ -8,6 +8,7 @@ import { getHostServiceClientByUrl } from "renderer/lib/host-service-client";
 import { useDashboardSidebarState } from "renderer/routes/_authenticated/hooks/useDashboardSidebarState";
 import { useCollections } from "renderer/routes/_authenticated/providers/CollectionsProvider";
 import { useLocalHostService } from "renderer/routes/_authenticated/providers/LocalHostServiceProvider";
+import { useV2SidebarGroupingStore } from "renderer/stores/v2-sidebar-grouping";
 import { MOCK_ORG_ID } from "shared/constants";
 import type {
 	DashboardSidebarProject,
@@ -15,7 +16,6 @@ import type {
 	DashboardSidebarSection,
 	DashboardSidebarWorkspace,
 } from "../../types";
-import { MOCK_SIDEBAR_PROJECTS } from "./mock-data";
 
 // Pending workspaces are always rendered at the end of the project's workspace list
 const PENDING_WORKSPACE_TAB_ORDER = Number.MAX_SAFE_INTEGER;
@@ -339,12 +339,422 @@ export function useDashboardSidebarData() {
 		sidebarWorkspaces,
 	]);
 
-	const USE_MOCK = import.meta.env.VITE_MOCK_SIDEBAR === "true";
-	const effectiveGroups =
-		USE_MOCK || groups.length === 0 ? MOCK_SIDEBAR_PROJECTS : groups;
+	// DEMO: inject fake projects/workspaces in dev mode so sidebar isn't empty
+	const demoGroups = useMemo<DashboardSidebarProject[]>(() => {
+		if (!env.SKIP_ENV_VALIDATION) return [];
+		const now = new Date();
+		const daysAgo = (d: number) =>
+			new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+		const mkChecks = (
+			statuses: Array<
+				"success" | "failure" | "pending" | "skipped" | "cancelled"
+			>,
+		) =>
+			statuses.map((status, i) => ({
+				name: ["lint", "typecheck", "test", "build", "e2e"][i] ?? `check-${i}`,
+				status,
+				url: "https://github.com/example/example/actions/runs/1",
+			}));
+		const mkWs = (
+			id: string,
+			name: string,
+			branch: string,
+			overrides: Partial<DashboardSidebarWorkspace> = {},
+			ageDays = 3,
+		): DashboardSidebarWorkspace => ({
+			id,
+			projectId: "",
+			deviceId: "demo-device",
+			hostType: "local-device",
+			accentColor: null,
+			name,
+			branch,
+			pullRequest: null,
+			repoUrl: null,
+			branchExistsOnRemote: true,
+			previewUrl: null,
+			needsRebase: false,
+			behindCount: 0,
+			createdAt: daysAgo(ageDays),
+			updatedAt: daysAgo(Math.max(0, ageDays - 1)),
+			...overrides,
+		});
+		const mkProject = (
+			id: string,
+			name: string,
+			githubOwner: string | null,
+			children: DashboardSidebarProjectChild[],
+		): DashboardSidebarProject => {
+			const repoShort = name.toLowerCase();
+			const derivedRepoUrl = githubOwner
+				? `https://github.com/${githubOwner}/${repoShort}`
+				: `https://local/${repoShort}`;
+			return {
+				id,
+				name,
+				slug: repoShort,
+				githubRepositoryId: null,
+				githubOwner,
+				githubRepoName: repoShort,
+				createdAt: now,
+				updatedAt: now,
+				isCollapsed: false,
+				children: children.map((c) => {
+					if (c.type === "workspace")
+						return {
+							...c,
+							workspace: {
+								...c.workspace,
+								projectId: id,
+								repoUrl: c.workspace.repoUrl ?? derivedRepoUrl,
+							},
+						};
+					return c;
+				}),
+			};
+		};
+		const prOpen = (
+			n: number,
+			title: string,
+			repo = "superset-sh/superset",
+		) => ({
+			url: `https://github.com/${repo}/pull/${n}`,
+			number: n,
+			title,
+			state: "open" as const,
+			reviewDecision: "pending" as const,
+			requestedReviewers: ["octocat", "monalisa"],
+			checksStatus: "pending" as const,
+			checks: mkChecks(["success", "pending", "pending"]),
+		});
+		const prApproved = (
+			n: number,
+			title: string,
+			repo = "superset-sh/superset",
+		) => ({
+			url: `https://github.com/${repo}/pull/${n}`,
+			number: n,
+			title,
+			state: "open" as const,
+			reviewDecision: "approved" as const,
+			checksStatus: "success" as const,
+			checks: mkChecks(["success", "success", "success", "success"]),
+		});
+		const prDraft = (
+			n: number,
+			title: string,
+			repo = "superset-sh/superset",
+		) => ({
+			url: `https://github.com/${repo}/pull/${n}`,
+			number: n,
+			title,
+			state: "draft" as const,
+			reviewDecision: null,
+			checksStatus: "pending" as const,
+			checks: mkChecks(["pending", "pending"]),
+		});
+		const prMerged = (
+			n: number,
+			title: string,
+			repo = "superset-sh/superset",
+		) => ({
+			url: `https://github.com/${repo}/pull/${n}`,
+			number: n,
+			title,
+			state: "merged" as const,
+			reviewDecision: "approved" as const,
+			checksStatus: "success" as const,
+			checks: mkChecks(["success", "success", "success"]),
+		});
+		const prClosed = (
+			n: number,
+			title: string,
+			repo = "superset-sh/superset",
+		) => ({
+			url: `https://github.com/${repo}/pull/${n}`,
+			number: n,
+			title,
+			state: "closed" as const,
+			reviewDecision: null,
+			checksStatus: "none" as const,
+			checks: [],
+		});
+		const withRepo = (
+			ws: DashboardSidebarWorkspace,
+			owner: string,
+			repo: string,
+			previewUrl?: string,
+		): DashboardSidebarWorkspace => ({
+			...ws,
+			repoUrl: `https://github.com/${owner}/${repo}`,
+			previewUrl: previewUrl ?? null,
+		});
+		return [
+			mkProject("p-superset", "superset", "superset-sh", [
+				{
+					type: "workspace",
+					workspace: withRepo(
+						mkWs(
+							"w-1",
+							"mcp device presence heartbeat",
+							"fix/mcp-device-presence-heartbeat",
+							{
+								pullRequest: prOpen(
+									3475,
+									"fix(mcp): restore lightweight device presence heartbeat",
+								),
+							},
+							2,
+						),
+						"superset-sh",
+						"superset",
+					),
+				},
+				{
+					type: "workspace",
+					workspace: withRepo(
+						mkWs(
+							"w-2",
+							"v2 sidebar conductor style",
+							"demo/conductor-style-sidebar",
+							{
+								pullRequest: prDraft(
+									3476,
+									"feat(desktop): cleaner conductor-style v2 sidebar",
+								),
+								needsRebase: true,
+								behindCount: 3,
+							},
+							1,
+						),
+						"superset-sh",
+						"superset",
+						"https://pr-3476.preview.superset.sh",
+					),
+				},
+				{
+					type: "workspace",
+					workspace: withRepo(
+						mkWs(
+							"w-3",
+							"Group by PR status",
+							"feat/sidebar-group-by-status",
+							{
+								pullRequest: prApproved(
+									3470,
+									"feat(desktop): group v2 sidebar by PR status",
+								),
+							},
+							5,
+						),
+						"superset-sh",
+						"superset",
+						"https://pr-3470.preview.superset.sh",
+					),
+				},
+				{
+					type: "workspace",
+					workspace: withRepo(
+						mkWs(
+							"w-4",
+							"Hide dotfiles toggle",
+							"feat/hide-dotfiles",
+							{
+								pullRequest: prMerged(
+									3450,
+									"feat(desktop): hide-dotfiles toggle in file tree",
+								),
+							},
+							10,
+						),
+						"superset-sh",
+						"superset",
+					),
+				},
+				{
+					type: "workspace",
+					workspace: withRepo(
+						mkWs(
+							"w-5",
+							"Right sidebar polish",
+							"feat/right-sidebar-polish",
+							{
+								pullRequest: prClosed(
+									3420,
+									"feat(desktop): polish right sidebar tabs",
+								),
+							},
+							15,
+						),
+						"superset-sh",
+						"superset",
+					),
+				},
+			]),
+			mkProject("p-parlo", "parlo", null, [
+				{
+					type: "workspace",
+					workspace: mkWs(
+						"w-6",
+						"Onboarding flow redesign",
+						"feat/onboarding",
+						{
+							pullRequest: prOpen(42, "Onboarding flow redesign"),
+						},
+					),
+				},
+				{
+					type: "workspace",
+					workspace: mkWs("w-7", "Product checkout", "feat/checkout", {
+						pullRequest: prDraft(44, "Checkout v2"),
+					}),
+				},
+				{
+					type: "workspace",
+					workspace: mkWs("w-8", "Fix payment webhook", "fix/stripe-webhook", {
+						pullRequest: prMerged(40, "Stripe webhook fix"),
+					}),
+				},
+			]),
+			mkProject("p-chapchap", "chapchap", null, [
+				{
+					type: "workspace",
+					workspace: mkWs("w-9", "New landing page", "feat/landing", {
+						pullRequest: prOpen(18, "New landing page"),
+					}),
+				},
+				{
+					type: "workspace",
+					workspace: mkWs("w-10", "SEO meta tags", "chore/seo", {
+						pullRequest: prMerged(17, "SEO meta tags"),
+					}),
+				},
+			]),
+			mkProject("p-alumnai", "alumnai", null, [
+				{
+					type: "workspace",
+					workspace: mkWs("w-11", "Dashboard metrics", "feat/metrics", {
+						pullRequest: prApproved(91, "Dashboard metrics"),
+					}),
+				},
+				{
+					type: "workspace",
+					workspace: mkWs("w-12", "Email digest", "feat/digest", {
+						pullRequest: prDraft(92, "Weekly email digest"),
+					}),
+				},
+				{
+					type: "workspace",
+					workspace: mkWs("w-13", "Auth refactor", "refactor/auth", {
+						pullRequest: prMerged(88, "Auth refactor"),
+					}),
+				},
+			]),
+			mkProject("p-marketing", "marketing", null, [
+				{
+					type: "workspace",
+					workspace: mkWs("w-14", "Compare pages", "feat/compare", {
+						pullRequest: prOpen(7, "Compare pages"),
+					}),
+				},
+			]),
+			mkProject("p-highlife", "highlife", null, [
+				{
+					type: "workspace",
+					workspace: mkWs("w-15", "Map rendering perf", "perf/map", {
+						pullRequest: prMerged(23, "Map rendering"),
+					}),
+				},
+			]),
+			mkProject("p-mailchiore", "Mailchiore", null, [
+				{
+					type: "workspace",
+					workspace: mkWs("w-16", "Template editor", "feat/editor"),
+				},
+			]),
+		];
+	}, []);
+
+	const rawBaseGroups = env.SKIP_ENV_VALIDATION ? demoGroups : groups;
+
+	const groupingMode = useV2SidebarGroupingStore((s) => s.mode);
+	const hiddenStatuses = useV2SidebarGroupingStore((s) => s.hiddenStatuses);
+	const hiddenProjectIds = useV2SidebarGroupingStore((s) => s.hiddenProjectIds);
+
+	const baseGroups = useMemo(() => {
+		const hidden = new Set(hiddenProjectIds);
+		return rawBaseGroups.filter((p) => !hidden.has(p.id));
+	}, [rawBaseGroups, hiddenProjectIds]);
+
+	// Pivot: regroup workspaces by PR status instead of project
+	const statusGroups = useMemo<DashboardSidebarProject[]>(() => {
+		if (groupingMode !== "status") return [];
+		type Bucket =
+			| "in-progress"
+			| "in-review"
+			| "ready-to-merge"
+			| "done"
+			| "canceled"
+			| "backlog";
+		const bucketOrder: Bucket[] = [
+			"in-progress",
+			"in-review",
+			"ready-to-merge",
+			"done",
+			"canceled",
+			"backlog",
+		];
+		const bucketLabel: Record<Bucket, string> = {
+			"in-progress": "In progress",
+			"in-review": "In review",
+			"ready-to-merge": "Ready to merge",
+			done: "Done",
+			canceled: "Canceled",
+			backlog: "Backlog",
+		};
+		const bucketOf = (ws: DashboardSidebarWorkspace): Bucket => {
+			const pr = ws.pullRequest;
+			if (!pr) return "backlog";
+			if (pr.state === "merged") return "done";
+			if (pr.state === "closed") return "canceled";
+			if (pr.state === "draft") return "in-progress";
+			if (pr.reviewDecision === "approved") return "ready-to-merge";
+			return "in-review";
+		};
+		const buckets = new Map<Bucket, DashboardSidebarWorkspace[]>();
+		for (const b of bucketOrder) buckets.set(b, []);
+		for (const project of baseGroups) {
+			for (const child of project.children) {
+				if (child.type !== "workspace") continue;
+				buckets.get(bucketOf(child.workspace))?.push(child.workspace);
+			}
+		}
+		const now = new Date();
+		const hidden = new Set(hiddenStatuses);
+		return bucketOrder
+			.filter((b) => !hidden.has(b))
+			.map<DashboardSidebarProject>((b) => ({
+				id: `status-${b}`,
+				name: bucketLabel[b],
+				slug: b,
+				githubRepositoryId: null,
+				githubOwner: null,
+				githubRepoName: null,
+				createdAt: now,
+				updatedAt: now,
+				isCollapsed: false,
+				children: (buckets.get(b) ?? []).map<DashboardSidebarProjectChild>(
+					(ws) => ({ type: "workspace", workspace: ws }),
+				),
+			}))
+			.filter((g) => g.children.length > 0);
+	}, [baseGroups, groupingMode, hiddenStatuses]);
+
+	const effectiveGroups = groupingMode === "status" ? statusGroups : baseGroups;
 
 	return {
 		groups: effectiveGroups,
+		availableProjects: rawBaseGroups,
 		refetchPullRequests,
 		refreshWorkspacePullRequest,
 		toggleProjectCollapsed,
