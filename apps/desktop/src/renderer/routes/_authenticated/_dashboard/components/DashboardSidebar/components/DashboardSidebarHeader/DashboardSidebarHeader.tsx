@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
-import { LuFolderPlus, LuLayers, LuPlus } from "react-icons/lu";
+import { LuFilter, LuFolderPlus, LuLayers, LuPlus } from "react-icons/lu";
 import { useHotkeyDisplay } from "renderer/hotkeys";
 import { OrganizationDropdown } from "renderer/routes/_authenticated/_dashboard/components/TopBar/components/OrganizationDropdown";
 import { STROKE_WIDTH_THICK } from "renderer/screens/main/components/WorkspaceSidebar/constants";
@@ -9,10 +9,14 @@ import { useOpenNewWorkspaceModal } from "renderer/stores/new-workspace-modal";
 
 interface DashboardSidebarHeaderProps {
 	isCollapsed?: boolean;
+	viewMode?: "projects" | "status";
+	onViewModeChange?: (mode: "projects" | "status") => void;
 }
 
 export function DashboardSidebarHeader({
 	isCollapsed = false,
+	viewMode = "projects",
+	onViewModeChange,
 }: DashboardSidebarHeaderProps) {
 	const openModal = useOpenNewWorkspaceModal();
 	const shortcutText = useHotkeyDisplay("NEW_WORKSPACE").text;
@@ -83,6 +87,31 @@ export function DashboardSidebarHeader({
 				<div className="flex-1 min-w-0">
 					<OrganizationDropdown variant="expanded" />
 				</div>
+				<Tooltip delayDuration={300}>
+					<TooltipTrigger asChild>
+						<button
+							type="button"
+							onClick={() =>
+								onViewModeChange?.(
+									viewMode === "projects" ? "status" : "projects",
+								)
+							}
+							className={cn(
+								"flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+								viewMode === "status"
+									? "bg-accent text-foreground"
+									: "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+							)}
+						>
+							<LuFilter className="size-4" />
+						</button>
+					</TooltipTrigger>
+					<TooltipContent side="right">
+						{viewMode === "projects"
+							? "Group by PR status"
+							: "Group by project"}
+					</TooltipContent>
+				</Tooltip>
 				<Tooltip delayDuration={300}>
 					<TooltipTrigger asChild>
 						<button

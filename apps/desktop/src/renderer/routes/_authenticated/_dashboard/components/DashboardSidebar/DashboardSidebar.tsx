@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 import { useDashboardSidebarState } from "renderer/routes/_authenticated/hooks/useDashboardSidebarState";
 import { DashboardSidebarHeader } from "./components/DashboardSidebarHeader";
 import { DashboardSidebarProjectSection } from "./components/DashboardSidebarProjectSection";
+import { DashboardSidebarStatusGroups } from "./components/DashboardSidebarStatusGroups";
 import { useDashboardSidebarData } from "./hooks/useDashboardSidebarData";
 import { useDashboardSidebarShortcuts } from "./hooks/useDashboardSidebarShortcuts";
 import type { DashboardSidebarProject } from "./types";
@@ -78,6 +79,8 @@ function SortableProjectWrapper({
 	);
 }
 
+type SidebarViewMode = "projects" | "status";
+
 export function DashboardSidebar({
 	isCollapsed = false,
 }: DashboardSidebarProps) {
@@ -85,6 +88,7 @@ export function DashboardSidebar({
 		useDashboardSidebarData();
 	const workspaceShortcutLabels = useDashboardSidebarShortcuts(groups);
 	const { reorderProjects } = useDashboardSidebarState();
+	const [viewMode, setViewMode] = useState<SidebarViewMode>("projects");
 
 	const sensors = useSensors(
 		useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -132,57 +136,65 @@ export function DashboardSidebar({
 
 	return (
 		<div className="flex h-full flex-col border-r border-border bg-muted/45 dark:bg-muted/35">
-			<DashboardSidebarHeader isCollapsed={isCollapsed} />
+			<DashboardSidebarHeader
+				isCollapsed={isCollapsed}
+				viewMode={viewMode}
+				onViewModeChange={setViewMode}
+			/>
 
 			<div className="flex flex-1 flex-col gap-3 overflow-y-auto hide-scrollbar pt-3">
-				<DndContext
-					sensors={sensors}
-					collisionDetection={closestCenter}
-					measuring={{
-						droppable: { strategy: MeasuringStrategy.Always },
-					}}
-					onDragStart={({ active }) => {
-						const project = groups.find((p) => p.id === active.id);
-						setActiveProject(project ?? null);
-					}}
-					onDragEnd={handleDragEnd}
-					onDragCancel={() => setActiveProject(null)}
-				>
-					<SortableContext
-						items={projectOrder}
-						strategy={verticalListSortingStrategy}
+				{viewMode === "status" ? (
+					<DashboardSidebarStatusGroups groups={groups} />
+				) : (
+					<DndContext
+						sensors={sensors}
+						collisionDetection={closestCenter}
+						measuring={{
+							droppable: { strategy: MeasuringStrategy.Always },
+						}}
+						onDragStart={({ active }) => {
+							const project = groups.find((p) => p.id === active.id);
+							setActiveProject(project ?? null);
+						}}
+						onDragEnd={handleDragEnd}
+						onDragCancel={() => setActiveProject(null)}
 					>
-						{orderedGroups.map((project) => (
-							<SortableProjectWrapper
-								key={project.id}
-								project={project}
-								isCollapsed={isCollapsed}
-								isDraggingProject={activeProject != null}
-								workspaceShortcutLabels={workspaceShortcutLabels}
-								onWorkspaceHover={refreshWorkspacePullRequest}
-								onToggleCollapse={toggleProjectCollapsed}
-							/>
-						))}
-					</SortableContext>
+						<SortableContext
+							items={projectOrder}
+							strategy={verticalListSortingStrategy}
+						>
+							{orderedGroups.map((project) => (
+								<SortableProjectWrapper
+									key={project.id}
+									project={project}
+									isCollapsed={isCollapsed}
+									isDraggingProject={activeProject != null}
+									workspaceShortcutLabels={workspaceShortcutLabels}
+									onWorkspaceHover={refreshWorkspacePullRequest}
+									onToggleCollapse={toggleProjectCollapsed}
+								/>
+							))}
+						</SortableContext>
 
-					{createPortal(
-						<DragOverlay dropAnimation={null}>
-							{activeProject && (
-								<div className="bg-background shadow-lg border-b border-border">
-									<DashboardSidebarProjectSection
-										project={activeProject}
-										isSidebarCollapsed={isCollapsed}
-										isDraggingProject
-										workspaceShortcutLabels={workspaceShortcutLabels}
-										onWorkspaceHover={() => {}}
-										onToggleCollapse={() => {}}
-									/>
-								</div>
-							)}
-						</DragOverlay>,
-						document.body,
-					)}
-				</DndContext>
+						{createPortal(
+							<DragOverlay dropAnimation={null}>
+								{activeProject && (
+									<div className="bg-background shadow-lg border-b border-border">
+										<DashboardSidebarProjectSection
+											project={activeProject}
+											isSidebarCollapsed={isCollapsed}
+											isDraggingProject
+											workspaceShortcutLabels={workspaceShortcutLabels}
+											onWorkspaceHover={() => {}}
+											onToggleCollapse={() => {}}
+										/>
+									</div>
+								)}
+							</DragOverlay>,
+							document.body,
+						)}
+					</DndContext>
+				)}
 			</div>
 		</div>
 	);
