@@ -683,7 +683,24 @@ export function useDashboardSidebarData() {
 
 	const baseGroups = useMemo(() => {
 		const hidden = new Set(hiddenProjectIds);
-		return rawBaseGroups.filter((p) => !hidden.has(p.id));
+		const prSortOrder = (ws: DashboardSidebarWorkspace): number => {
+			const pr = ws.pullRequest;
+			if (!pr) return 2;
+			if (pr.state === "draft") return 0;
+			if (pr.state === "open") return 1;
+			if (pr.state === "merged") return 3;
+			if (pr.state === "closed") return 4;
+			return 2;
+		};
+		return rawBaseGroups
+			.filter((p) => !hidden.has(p.id))
+			.map((p) => ({
+				...p,
+				children: [...p.children].sort((a, b) => {
+					if (a.type !== "workspace" || b.type !== "workspace") return 0;
+					return prSortOrder(a.workspace) - prSortOrder(b.workspace);
+				}),
+			}));
 	}, [rawBaseGroups, hiddenProjectIds]);
 
 	// Pivot: regroup workspaces by PR status instead of project
