@@ -60,6 +60,14 @@ export type DashboardSidebarProjectChild =
 			section: DashboardSidebarSection;
 	  };
 
+export type StatusBucketId =
+	| "in-progress"
+	| "in-review"
+	| "ready-to-merge"
+	| "done"
+	| "canceled"
+	| "backlog";
+
 export interface DashboardSidebarProject {
 	id: string;
 	name: string;
@@ -71,4 +79,5 @@ export interface DashboardSidebarProject {
 	updatedAt: Date;
 	isCollapsed: boolean;
 	children: DashboardSidebarProjectChild[];
+	statusBucket?: StatusBucketId;
 }

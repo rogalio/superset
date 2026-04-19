@@ -1,8 +1,28 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@superset/ui/tooltip";
 import { cn } from "@superset/ui/utils";
+import {
+	CircleCheck,
+	CircleDashed,
+	CircleDot,
+	CircleDotDashed,
+	CircleX,
+} from "lucide-react";
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
 import { HiChevronRight, HiMiniPlus } from "react-icons/hi2";
 import { RenameInput } from "renderer/screens/main/components/WorkspaceSidebar/RenameInput";
+import type { StatusBucketId } from "../../../../types";
+
+const STATUS_BUCKET_ICON: Record<
+	StatusBucketId,
+	{ icon: React.ComponentType<{ className?: string }>; color: string }
+> = {
+	"in-progress": { icon: CircleDotDashed, color: "text-muted-foreground/70" },
+	"in-review": { icon: CircleDot, color: "text-emerald-400/80" },
+	"ready-to-merge": { icon: CircleCheck, color: "text-emerald-400/80" },
+	done: { icon: CircleCheck, color: "text-violet-400/70" },
+	canceled: { icon: CircleX, color: "text-muted-foreground/50" },
+	backlog: { icon: CircleDashed, color: "text-muted-foreground/50" },
+};
 
 interface DashboardSidebarProjectRowProps
 	extends ComponentPropsWithoutRef<"div"> {
@@ -13,6 +33,7 @@ interface DashboardSidebarProjectRowProps
 	isCollapsed: boolean;
 	isRenaming: boolean;
 	renameValue: string;
+	statusBucket?: StatusBucketId;
 	onRenameValueChange: (value: string) => void;
 	onSubmitRename: () => void;
 	onCancelRename: () => void;
@@ -34,6 +55,7 @@ export const DashboardSidebarProjectRow = forwardRef<
 			isCollapsed,
 			isRenaming,
 			renameValue,
+			statusBucket,
 			onRenameValueChange,
 			onSubmitRename,
 			onCancelRename,
@@ -45,6 +67,9 @@ export const DashboardSidebarProjectRow = forwardRef<
 		},
 		ref,
 	) => {
+		const bucketMeta = statusBucket ? STATUS_BUCKET_ICON[statusBucket] : null;
+		const BucketIcon = bucketMeta?.icon ?? null;
+
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: The header acts as a single toggle target in view mode while preserving nested inline controls.
 			<div
@@ -76,6 +101,9 @@ export const DashboardSidebarProjectRow = forwardRef<
 					)}
 				/>
 				<div className="flex min-w-0 flex-1 items-center gap-2">
+					{BucketIcon && (
+						<BucketIcon className={cn("size-4 shrink-0", bucketMeta?.color)} />
+					)}
 					{isRenaming ? (
 						<RenameInput
 							value={renameValue}

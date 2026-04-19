@@ -743,6 +743,7 @@ export function useDashboardSidebarData() {
 				createdAt: now,
 				updatedAt: now,
 				isCollapsed: false,
+				statusBucket: b,
 				children: (buckets.get(b) ?? []).map<DashboardSidebarProjectChild>(
 					(ws) => ({ type: "workspace", workspace: ws }),
 				),

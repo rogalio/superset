@@ -101,6 +101,7 @@ export function DashboardSidebarProjectSection({
 					isCollapsed={project.isCollapsed}
 					isRenaming={isRenaming}
 					renameValue={renameValue}
+					statusBucket={project.statusBucket}
 					onRenameValueChange={setRenameValue}
 					onSubmitRename={submitRename}
 					onCancelRename={cancelRename}
