@@ -87,7 +87,7 @@ export function SidebarGroupingPopover({
 		() => hiddenProjectIds.length > 0,
 	);
 
-	const totalFilters = hiddenStatuses.length + hiddenProjectIds.length;
+	const _totalFilters = hiddenStatuses.length + hiddenProjectIds.length;
 
 	return (
 		<Popover>
@@ -100,11 +100,6 @@ export function SidebarGroupingPopover({
 							aria-label="Grouping & filters"
 						>
 							<LuListFilter className="size-4" />
-							{totalFilters > 0 && (
-								<span className="absolute -top-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-medium text-primary-foreground">
-									{totalFilters}
-								</span>
-							)}
 						</button>
 					</PopoverTrigger>
 				</TooltipTrigger>

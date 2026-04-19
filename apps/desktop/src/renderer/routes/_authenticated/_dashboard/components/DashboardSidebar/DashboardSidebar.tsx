@@ -85,10 +85,35 @@ export function DashboardSidebar({
 		groups,
 		availableProjects,
 		refreshWorkspacePullRequest,
-		toggleProjectCollapsed,
+		toggleProjectCollapsed: toggleRealProjectCollapsed,
 	} = useDashboardSidebarData();
 	const workspaceShortcutLabels = useDashboardSidebarShortcuts(groups);
 	const { reorderProjects } = useDashboardSidebarState();
+
+	const [localCollapsed, setLocalCollapsed] = useState<Set<string>>(new Set());
+	const toggleProjectCollapsed = useCallback(
+		(projectId: string) => {
+			if (projectId.startsWith("status-")) {
+				setLocalCollapsed((prev) => {
+					const next = new Set(prev);
+					if (next.has(projectId)) next.delete(projectId);
+					else next.add(projectId);
+					return next;
+				});
+			} else {
+				toggleRealProjectCollapsed(projectId);
+			}
+		},
+		[toggleRealProjectCollapsed],
+	);
+
+	const groupsWithLocalCollapse = useMemo(
+		() =>
+			groups.map((g) =>
+				localCollapsed.has(g.id) ? { ...g, isCollapsed: true } : g,
+			),
+		[groups, localCollapsed],
+	);
 
 	const sensors = useSensors(
 		useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -105,18 +130,18 @@ export function DashboardSidebar({
 
 	// Local project order — syncs from groups, updated on drag end
 	const [projectOrder, setProjectOrder] = useState(() =>
-		groups.map((p) => p.id),
+		groupsWithLocalCollapse.map((p) => p.id),
 	);
 	useEffect(() => {
-		setProjectOrder(groups.map((p) => p.id));
-	}, [groups]);
+		setProjectOrder(groupsWithLocalCollapse.map((p) => p.id));
+	}, [groupsWithLocalCollapse]);
 
 	const orderedGroups = useMemo(() => {
-		const byId = new Map(groups.map((g) => [g.id, g]));
+		const byId = new Map(groupsWithLocalCollapse.map((g) => [g.id, g]));
 		return projectOrder
 			.map((id) => byId.get(id))
 			.filter((g): g is DashboardSidebarProject => g != null);
-	}, [groups, projectOrder]);
+	}, [groupsWithLocalCollapse, projectOrder]);
 
 	const handleDragEnd = useCallback(
 		({ active, over }: DragEndEvent) => {
