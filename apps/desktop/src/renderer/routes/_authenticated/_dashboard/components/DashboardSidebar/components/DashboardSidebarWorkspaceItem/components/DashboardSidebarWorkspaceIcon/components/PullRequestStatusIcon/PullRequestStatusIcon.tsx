@@ -38,7 +38,7 @@ export function PullRequestStatusIcon({
 	if (pr.state === "draft") {
 		return (
 			<GitPullRequestDraft
-				className={cn(baseClass, "text-muted-foreground/70")}
+				className={cn(baseClass, "text-amber-400/80")}
 				strokeWidth={strokeWidth}
 			/>
 		);

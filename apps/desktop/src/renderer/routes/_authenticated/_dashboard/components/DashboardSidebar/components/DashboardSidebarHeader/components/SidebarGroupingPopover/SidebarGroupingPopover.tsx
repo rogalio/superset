@@ -31,7 +31,7 @@ const STATUS_META: Record<
 	"in-progress": {
 		label: "In progress",
 		icon: CircleDotDashed,
-		color: "text-muted-foreground/70",
+		color: "text-amber-400/80",
 	},
 	"in-review": {
 		label: "In review",
@@ -47,7 +47,7 @@ const STATUS_META: Record<
 	canceled: {
 		label: "Canceled",
 		icon: CircleX,
-		color: "text-muted-foreground/50",
+		color: "text-rose-400/70",
 	},
 	backlog: {
 		label: "Backlog",

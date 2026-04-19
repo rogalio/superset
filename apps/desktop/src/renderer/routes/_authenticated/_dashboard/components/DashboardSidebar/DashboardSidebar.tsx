@@ -91,20 +91,20 @@ export function DashboardSidebar({
 	const { reorderProjects } = useDashboardSidebarState();
 
 	const [localCollapsed, setLocalCollapsed] = useState<Set<string>>(new Set());
+	const toggleLocalCollapsed = useCallback((id: string) => {
+		setLocalCollapsed((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}, []);
 	const toggleProjectCollapsed = useCallback(
 		(projectId: string) => {
-			if (projectId.startsWith("status-")) {
-				setLocalCollapsed((prev) => {
-					const next = new Set(prev);
-					if (next.has(projectId)) next.delete(projectId);
-					else next.add(projectId);
-					return next;
-				});
-			} else {
-				toggleRealProjectCollapsed(projectId);
-			}
+			toggleRealProjectCollapsed(projectId);
+			toggleLocalCollapsed(projectId);
 		},
-		[toggleRealProjectCollapsed],
+		[toggleRealProjectCollapsed, toggleLocalCollapsed],
 	);
 
 	const groupsWithLocalCollapse = useMemo(
